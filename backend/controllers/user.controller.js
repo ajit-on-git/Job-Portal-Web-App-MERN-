@@ -1,3 +1,6 @@
+// user.controller.js
+
+
 import bcrypt from "bcryptjs";
 import { User } from "../models/user.model.js";
 import jwt from "jsonwebtoken";
@@ -14,9 +17,13 @@ export const register = async (req, res) => {
       });
     }
 
-    const file = req.file;
-    const fileUri = getDataUri(file);
-    const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+if (req.file) {
+  const fileUri = getDataUri(req.file);
+  const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+
+  user.profile.resume = cloudResponse.secure_url;
+  user.profile.resumeOriginalName = req.file.originalname;
+}
 
     const user = await User.findOne({ email });
     if (user) {
@@ -123,22 +130,9 @@ export const logout = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const { fullname, email, phoneNumber, bio, skills } = req.body;
-    // console.log( fullname, email, phoneNumber, bio, skills);
-    
-        // cloudennary
 
-    const file = req.file;
-const fileUri = getDataUri(file);
-const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
-
-
-
-
-    let skillsArray;
-    if (skills) {
-       skillsArray = skills.split(",");
-    }
     const userId = req.id;
+
     let user = await User.findById(userId);
     if (!user) {
       return res.status(400).json({
@@ -146,55 +140,39 @@ const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
         success: false,
       });
     }
-    // updating data
+
+    // Update basic fields
     if (fullname) user.fullname = fullname;
     if (email) user.email = email;
     if (phoneNumber) user.phoneNumber = phoneNumber;
-
     if (bio) user.profile.bio = bio;
 
-    if (skills) user.profile.skills = skillsArray;
+    if (skills) {
+      user.profile.skills = skills.split(",");
+    }
 
-    // resume
+    // OPTIONAL file upload
+    if (req.file) {
+      const fileUri = getDataUri(req.file);
+      const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
 
-    // if(cloudResponse){
-    //   user.profile.resume = cloudResponse.secure_url; // save the cloudinary url
-    //   if(file.resumeOriginalName){
-
-    //     user.profile.resumeOriginalName = file.originalname; // save original file name
-    //   }
-
-    // }
-
-/////////// from reference yu can delete
-    // Profile update
-
-    
-if(cloudResponse){
-  user.profile.resume = cloudResponse.secure_url;  // save the cloudinary URL
-  if(file && file.originalname) {
-    user.profile.resumeOriginalName = file.originalname; // save original file name
-  }
-}
-
+      user.profile.resume = cloudResponse.secure_url;
+      user.profile.resumeOriginalName = req.file.originalname;
+    }
 
     await user.save();
-
-    user = {
-      _id: user._id,
-      fullname: user.fullname,
-      email: user.email,
-      phoneNumber: user.phoneNumber,
-      role: user.role,
-      profile: user.profile,
-    };
 
     return res.status(200).json({
       message: "profile updated successfully",
       user,
       success: true,
     });
+
   } catch (error) {
-    console.log(error);
+    console.error(error);
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
   }
 };

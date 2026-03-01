@@ -1,3 +1,6 @@
+// job.controller.js
+
+
 import { Job } from "../models/job.model.js";
 
 export const postJob = async (req, res) => {
@@ -30,26 +33,30 @@ export const postJob = async (req, res) => {
         success: false,
       });
     }
-    const job = await Job.create({
-      title,
-      description,
-      requirements: requirements.split(","),
-      salary: Number(salary),
-      location,
-      jobType,
-      experienceLevel: experience,
-      position,
-      company: companyId,
-      created_by: userId,
-    });
+const job = await Job.create({
+  title,
+  description,
+  requirements: requirements.split(","),
+  salary: Number(salary),
+  location,
+  jobType,
+  experienceLevel: Number(experience),
+  position: Number(position),
+  company: companyId,
+  created_by: userId,
+});
     return res.status(201).json({
       message: "new job creaetd successfully",
       job,
       success: true,
     });
   } catch (error) {
-    console.log(error);
-  }
+  console.error(error);
+  return res.status(500).json({
+    message: "Internal server error",
+    success: false,
+  });
+}
 };
 
 export const getAllJobs = async (req, res) => {
